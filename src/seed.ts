@@ -1,9 +1,7 @@
 import { db, Settings } from './db';
-import { programData } from './data/program';
-import { hashString } from './utils/hash';
+import { programData, programVersion } from './data/program';
 
 const orderedWeeks = [...programData.weeks].sort((a, b) => a.order - b.order);
-export const programVersion = hashString(JSON.stringify(programData));
 
 const defaultSettings: Settings = {
   id: 'singleton',
@@ -24,9 +22,12 @@ export async function seedProgramIfNeeded() {
       await db.weeks.clear();
       await db.days.clear();
       await db.plannedExercises.clear();
+      const weekRows = [];
+      const dayRows = [];
+      const exerciseRows = [];
 
       for (const week of weeks) {
-        await db.weeks.put({
+        weekRows.push({
           key: week.key,
           title: week.title,
           order: week.order
@@ -34,7 +35,7 @@ export async function seedProgramIfNeeded() {
 
         for (const day of week.days) {
           const dayId = `${week.key}::${day.order}`;
-          await db.days.put({
+          dayRows.push({
             id: dayId,
             weekKey: week.key,
             title: day.title,
@@ -43,7 +44,7 @@ export async function seedProgramIfNeeded() {
 
           for (const [index, exercise] of day.exercises.entries()) {
             const exerciseId = `${dayId}::${index + 1}`;
-            await db.plannedExercises.put({
+            exerciseRows.push({
               id: exerciseId,
               dayId,
               weekKey: week.key,
@@ -67,6 +68,10 @@ export async function seedProgramIfNeeded() {
           }
         }
       }
+
+      await db.weeks.bulkPut(weekRows);
+      await db.days.bulkPut(dayRows);
+      await db.plannedExercises.bulkPut(exerciseRows);
     }
 
     const mergedSettings: Settings = {

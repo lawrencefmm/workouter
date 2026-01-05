@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:program": "python3 scripts/generate_program_ts.py"
   },
   "dependencies": {
     "dexie": "^4.0.4",

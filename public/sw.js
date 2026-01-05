@@ -17,7 +17,12 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-    ).then(() => self.clients.claim())
+    ).then(async () => {
+      if ('navigationPreload' in self.registration) {
+        await self.registration.navigationPreload.enable();
+      }
+      await self.clients.claim();
+    })
   );
 });
 
@@ -28,19 +33,6 @@ async function cacheFirst(request) {
   const response = await fetch(request);
   cache.put(request, response.clone());
   return response;
-}
-
-async function networkFirst(request) {
-  const cache = await caches.open(CACHE_NAME);
-  try {
-    const response = await fetch(request);
-    cache.put(request, response.clone());
-    return response;
-  } catch (error) {
-    const cached = await cache.match(request);
-    if (cached) return cached;
-    return cache.match('/index.html');
-  }
 }
 
 async function staleWhileRevalidate(request) {
@@ -60,7 +52,21 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin === self.location.origin) {
     if (request.mode === 'navigate') {
-      event.respondWith(networkFirst(request));
+      event.respondWith(
+        (async () => {
+          const cache = await caches.open(CACHE_NAME);
+          try {
+            const preload = await event.preloadResponse;
+            const response = preload || (await fetch(request));
+            cache.put(request, response.clone());
+            return response;
+          } catch (error) {
+            const cached = await cache.match(request);
+            if (cached) return cached;
+            return cache.match('/index.html');
+          }
+        })()
+      );
       return;
     }
     event.respondWith(cacheFirst(request));
