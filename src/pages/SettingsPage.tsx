@@ -3,6 +3,7 @@ import { db } from '../db';
 import { LiftType, liftLabels, PercentRecommendation, Theme } from '../types';
 import { useOfflineStatus } from '../hooks/useOfflineStatus';
 import { downloadBlob, toCsv } from '../utils/export';
+import { DownloadIcon } from '../components/Icons';
 
 const liftOptions: LiftType[] = ['SQUAT', 'BENCH', 'DEADLIFT', 'OHP'];
 const roundingOptions: Array<1.25 | 2.5 | 5> = [1.25, 2.5, 5];
@@ -197,13 +198,16 @@ export function SettingsPage() {
       <section className="card">
         <h2>Export</h2>
         <div className="button-row">
-          <button className="secondary-button" onClick={exportJson}>
+          <button className="secondary-button button-with-icon" onClick={exportJson}>
+            <DownloadIcon />
             Export JSON
           </button>
-          <button className="secondary-button" onClick={exportSessionsCsv}>
+          <button className="secondary-button button-with-icon" onClick={exportSessionsCsv}>
+            <DownloadIcon />
             Sessions CSV
           </button>
-          <button className="secondary-button" onClick={exportPrsCsv}>
+          <button className="secondary-button button-with-icon" onClick={exportPrsCsv}>
+            <DownloadIcon />
             PRs CSV
           </button>
         </div>

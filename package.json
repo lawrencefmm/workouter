@@ -2,12 +2,14 @@
   "name": "workouter-pwa",
   "private": true,
   "version": "0.1.0",
+  "author": "Lawrence Melo",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "generate:program": "python3 scripts/generate_program_ts.py"
+    "generate:program": "python3 scripts/generate_program_ts.py",
+    "test": "vitest run"
   },
   "dependencies": {
     "dexie": "^4.0.4",
@@ -22,7 +24,13 @@
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
     "@vitejs/plugin-react": "^4.2.1",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.2",
+    "fake-indexeddb": "^5.0.2",
+    "jsdom": "^24.0.0",
     "typescript": "^5.3.3",
-    "vite": "^5.1.4"
+    "vite": "^5.1.4",
+    "vitest": "^1.3.1"
   }
 }

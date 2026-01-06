@@ -38,7 +38,8 @@ export default function App() {
 
   return (
     <div className="app">
-      <main>
+      <a className="skip-link" href="#main-content">Skip to content</a>
+      <main id="main-content" tabIndex={-1}>
         <Suspense fallback={<div className="page">Loading view...</div>}>
           <Routes>
             <Route path="/" element={<Navigate to="/program" replace />} />

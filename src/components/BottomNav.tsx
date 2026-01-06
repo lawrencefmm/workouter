@@ -61,7 +61,7 @@ const navItems = [
 
 export function BottomNav() {
   return (
-    <nav className="bottom-nav">
+    <nav className="bottom-nav" aria-label="Primary">
       {navItems.map((item) => (
         <NavLink
           key={item.to}

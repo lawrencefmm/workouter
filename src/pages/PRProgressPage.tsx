@@ -12,6 +12,7 @@ import {
 import { db } from '../db';
 import { LiftType, liftLabels } from '../types';
 import { formatDate } from '../utils/format';
+import { PlusIcon } from '../components/Icons';
 
 const liftOptions: LiftType[] = ['SQUAT', 'BENCH', 'DEADLIFT', 'OHP'];
 
@@ -71,10 +72,12 @@ export function PRProgressPage() {
           </select>
         </div>
 
-        <div className="chart-wrapper">
+        <div className="chart-wrapper" role="img" aria-label={`PR progress chart for ${liftLabels[selectedLift]}`}>
           {chartData.length === 0 ? (
             <p className="muted">No PRs yet for {liftLabels[selectedLift]}.</p>
           ) : (
+            <>
+              <p className="sr-only">Line chart showing PR progression over time.</p>
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.2)" />
@@ -84,6 +87,7 @@ export function PRProgressPage() {
                 <Line type="monotone" dataKey="valueKg" stroke="var(--accent)" strokeWidth={3} dot />
               </LineChart>
             </ResponsiveContainer>
+            </>
           )}
         </div>
       </section>
@@ -120,7 +124,8 @@ export function PRProgressPage() {
             <span className="label">Notes (optional)</span>
             <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} />
           </label>
-          <button className="primary-button" type="submit">
+          <button className="primary-button button-with-icon" type="submit">
+            <PlusIcon />
             Save PR
           </button>
         </form>

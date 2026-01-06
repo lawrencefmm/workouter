@@ -5,6 +5,8 @@ import { db } from '../db';
 import { startSession } from '../services/sessions';
 import { liftLabels } from '../types';
 import { getPercentWeights } from '../utils/percent';
+import { formatDateTime } from '../utils/format';
+import { PlayIcon } from '../components/Icons';
 
 export function DayDetailPage() {
   const navigate = useNavigate();
@@ -14,6 +16,21 @@ export function DayDetailPage() {
   const exercises = useLiveQuery(
     () => (decodedDayId ? db.plannedExercises.where('dayId').equals(decodedDayId).sortBy('order') : []),
     [decodedDayId]
+  );
+  const latestSession = useLiveQuery(
+    () =>
+      decodedDayId
+        ? db.sessions
+            .where('dayId')
+            .equals(decodedDayId)
+            .toArray()
+            .then((rows) => rows.sort((a, b) => b.startedAt - a.startedAt)[0])
+        : undefined,
+    [decodedDayId]
+  );
+  const latestSets = useLiveQuery(
+    () => (latestSession?.id ? db.performedSets.where('sessionId').equals(latestSession.id).toArray() : []),
+    [latestSession?.id]
   );
   const settings = useLiveQuery(() => db.settings.get('singleton'), []);
   const oneRepMaxes = useLiveQuery(() => db.oneRepMaxes.toArray(), []);
@@ -30,6 +47,32 @@ export function DayDetailPage() {
     navigate(`/session/${sessionId}`);
   };
 
+  const summary = useMemo(() => {
+    if (!latestSession || !latestSets) return [];
+    const map = new Map<string, { name: string; sets: number; topWeight: number | null; reps: number }>();
+    latestSets.forEach((set) => {
+      const current = map.get(set.exerciseId) || {
+        name: set.exerciseName,
+        sets: 0,
+        topWeight: null,
+        reps: 0
+      };
+      const hasValue = set.weightKg !== null || (set.reps && set.reps.trim().length > 0);
+      if (hasValue) {
+        current.sets += 1;
+      }
+      if (set.weightKg !== null) {
+        current.topWeight = current.topWeight === null ? set.weightKg : Math.max(current.topWeight, set.weightKg);
+      }
+      const repsMatch = set.reps ? set.reps.match(/\d+/) : null;
+      if (repsMatch) {
+        current.reps += Number(repsMatch[0]);
+      }
+      map.set(set.exerciseId, current);
+    });
+    return Array.from(map.values()).filter((item) => item.sets > 0);
+  }, [latestSession, latestSets]);
+
   if (!day || !exercises) {
     return <div className="page">Loading day...</div>;
   }
@@ -42,7 +85,35 @@ export function DayDetailPage() {
         <p className="subtle">Warmups, working sets, and your %1RM targets.</p>
       </header>
 
-      <button className="primary-button" onClick={handleStart}>
+      <div className="card reveal" style={{ '--i': 0 } as CSSProperties}>
+        <div className="exercise-card__header">
+          <div>
+            <h2>Latest Session</h2>
+            <p className="muted">
+              {latestSession ? formatDateTime(latestSession.startedAt) : 'No sessions logged yet.'}
+            </p>
+          </div>
+          {latestSession && <span className="pill pill--ready">Logged</span>}
+        </div>
+        {summary.length === 0 ? (
+          <p className="muted">Start this workout to build your summary.</p>
+        ) : (
+          <div className="list">
+            {summary.map((item) => (
+              <div key={item.name} className="list-row">
+                <div>
+                  <strong>{item.name}</strong>
+                  <p className="muted">Sets: {item.sets} · Reps: {item.reps || '-'}</p>
+                </div>
+                <span className="muted">{item.topWeight ? `${item.topWeight} kg` : '-'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button className="primary-button button-with-icon" onClick={handleStart}>
+        <PlayIcon />
         Start Workout
       </button>
 

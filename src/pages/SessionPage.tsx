@@ -1,10 +1,11 @@
-import { useMemo, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../db';
 import { liftLabels } from '../types';
 import { formatDateTime } from '../utils/format';
 import { getPercentWeights } from '../utils/percent';
+import { ArrowLeftIcon, ArrowRightIcon, CheckIcon } from '../components/Icons';
 
 export function SessionPage() {
   const navigate = useNavigate();
@@ -83,13 +84,12 @@ export function SessionPage() {
     navigate('/history');
   };
 
-  if (!session || !sets) {
-    return <div className="page">Loading session...</div>;
-  }
+  const [activeIndex, setActiveIndex] = useState(0);
 
-  const exerciseBlocks = exercises && exercises.length
+  const exerciseBlocks = session && (exercises && exercises.length)
     ? exercises.map((exercise) => ({ exercise, sets: groupedSets.get(exercise.id) || [] }))
-    : Array.from(groupedSets.entries()).map(([exerciseId, setList]) => ({
+    : session
+    ? Array.from(groupedSets.entries()).map(([exerciseId, setList]) => ({
         exercise: {
           id: exerciseId,
           dayId: session.dayId,
@@ -112,7 +112,19 @@ export function SessionPage() {
           primaryLift: null
         },
         sets: setList
-      }));
+      }))
+    : [];
+
+  useEffect(() => {
+    if (exerciseBlocks.length === 0) return;
+    if (activeIndex >= exerciseBlocks.length) {
+      setActiveIndex(0);
+    }
+  }, [activeIndex, exerciseBlocks.length]);
+
+  if (!session || !sets) {
+    return <div className="page">Loading session...</div>;
+  }
 
   return (
     <div className="page">
@@ -132,13 +144,48 @@ export function SessionPage() {
             placeholder="How did it feel?"
           />
         </label>
-        <button className="secondary-button" onClick={handleFinish}>
+        <button className="secondary-button button-with-icon" onClick={handleFinish}>
+          <CheckIcon />
           Finish Workout
         </button>
       </section>
 
       <section className="exercise-list">
-        {exerciseBlocks.map(({ exercise, sets: setsForExercise }, index) => {
+        {exerciseBlocks.length > 0 && (
+          <div className="card reveal" style={{ '--i': 0 } as CSSProperties}>
+            <div className="exercise-card__header">
+              <div>
+                <h2>Exercise {activeIndex + 1} of {exerciseBlocks.length}</h2>
+                <p className="muted">Move through lifts with Next / Previous.</p>
+              </div>
+              <div className="button-row">
+                <button
+                  className="secondary-button button-with-icon"
+                  onClick={() => setActiveIndex((prev) => Math.max(0, prev - 1))}
+                  disabled={activeIndex === 0}
+                >
+                  <ArrowLeftIcon />
+                  Previous
+                </button>
+                <button
+                  className="primary-button button-with-icon"
+                  onClick={() => setActiveIndex((prev) => Math.min(exerciseBlocks.length - 1, prev + 1))}
+                  disabled={activeIndex === exerciseBlocks.length - 1}
+                >
+                  Next
+                  <ArrowRightIcon />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {exerciseBlocks.length === 0 && (
+          <div className="card">No exercises found for this session.</div>
+        )}
+
+        {exerciseBlocks.length > 0 && (() => {
+          const { exercise, sets: setsForExercise } = exerciseBlocks[activeIndex];
           const percentInfo =
             exercise.percentMin !== null &&
             exercise.percentMin !== undefined &&
@@ -157,7 +204,7 @@ export function SessionPage() {
               : null;
 
           return (
-            <div key={exercise.id} className="card exercise-card reveal" style={{ '--i': index } as CSSProperties}>
+            <div key={exercise.id} className="card exercise-card reveal" style={{ '--i': 1 } as CSSProperties}>
               <div className="exercise-card__header">
                 <div>
                   <h2>{exercise.name}</h2>
@@ -219,7 +266,10 @@ export function SessionPage() {
               <div className="set-table">
                 {setsForExercise.map((set) => {
                   const warmupCount = exercise.warmupSetsCount ?? 0;
-                  const displayIndex = set.isWarmup ? `W${set.setIndex}` : `${set.setIndex - warmupCount}`;
+                  const setNumber = set.isWarmup ? set.setIndex : set.setIndex - warmupCount;
+                  const displayIndex = set.isWarmup ? `W${setNumber}` : `${setNumber}`;
+                  const weightLabel = `${exercise.name} ${set.isWarmup ? 'warmup' : 'working'} set ${setNumber} weight in kg`;
+                  const repsLabel = `${exercise.name} ${set.isWarmup ? 'warmup' : 'working'} set ${setNumber} reps`;
                   return (
                     <div key={set.id} className={`set-row ${set.isWarmup ? 'is-warmup' : ''}`}>
                       <span className="set-label">{displayIndex}</span>
@@ -228,6 +278,7 @@ export function SessionPage() {
                       inputMode="decimal"
                       className="input"
                       placeholder="kg"
+                      aria-label={weightLabel}
                       value={set.weightKg ?? ''}
                       onChange={(event) =>
                         handleWeightChange(
@@ -243,6 +294,7 @@ export function SessionPage() {
                       inputMode="numeric"
                       className="input"
                       placeholder={exercise.repsPlanned || 'reps'}
+                      aria-label={repsLabel}
                       value={set.reps}
                       onChange={(event) => handleSetUpdate(set.id!, { reps: event.target.value })}
                     />
@@ -254,7 +306,7 @@ export function SessionPage() {
               {exercise.notes && <p className="notes">{exercise.notes}</p>}
             </div>
           );
-        })}
+        })()}
       </section>
     </div>
   );
